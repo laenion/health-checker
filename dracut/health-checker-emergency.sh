@@ -33,10 +33,15 @@ clear_and_reboot()
   # Try to clear the health_checker flag variable in GRUB environment variable
   # block
   echo "Clearing GRUB health_checker_flag"
+
+  # Make sure grub-editenv finds the grubenv file, otherwise it won't even try
+  # to access the Btrfs header
+  ln -s "${HC_ROOT_MOUNT}/boot" /
+  mount -t btrfs -o subvol=@/boot/writable "${my_root}" "${HC_ROOT_MOUNT}/boot/writable"
+
   grub2-editenv - set health_checker_flag=0
 
-  umount /run/health-checker
-  systemctl reboot --force
+  umount_and_reboot
 }
 
 try_grub_recovery()
