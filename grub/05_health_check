@@ -14,27 +14,34 @@ if [ -z "\${chosen}" -a -z "\${boot_once}" ]; then
     if [ "\${env_block}" ] ; then
       save_env -f "\${env_block}" health_checker_flag
     fi
-    # Try to mount /var/lib/misc from know subvolume locations
-    btrfs-mount-subvol (\${root}) /var /@/var
-    btrfs-mount-subvol (\${root}) /var/lib/misc /@/var/lib/misc
 
-    # Due to boo#1048088 btrfs-list-subvols currently doesn't give a list of
-    # subvolumes, so it's not possible to map
-    # /var/lib/misc/health-checker.state to a snapshot directory; use
-    # transactional-update state file as a workaround.
-    if [ -e /var/lib/misc/transactional-update.state ]; then
-      source /var/lib/misc/transactional-update.state
-      btrfs-mount-subvol (\$root) /.snapshots @/.snapshots
-      for snapshot in \${LAST_WORKING_SNAPSHOTS}; do
-        if [ -e "/.snapshots/\${snapshot}/grub-snapshot.cfg" ]; then
-          menuentry "Previous boot failed; booting snapshot \${snapshot}" { true; }
-          source /.snapshots/\${snapshot}/grub-snapshot.cfg
-          menuentry "________________" { true; }
-          set default=1
-          break
-        fi;
-      done
+    # health_checker_lastok contains the snapshot number of the latest
+    # successfully booted snapshot and is stored into the grubenv by user
+    # space. Previously the variable was stored in /var/lib/misc; to enable a
+    # smooth transition including the possibility to roll back keep the old
+    # code as a fallback.
+    if [ -z "\${health_checker_lastok}" ]; then
+      # Try to mount /var/lib/misc from know subvolume locations
+      btrfs-mount-subvol (\${root}) /var /@/var
+      btrfs-mount-subvol (\${root}) /var/lib/misc /@/var/lib/misc
+
+      # In GRUB it is not possible to map Btrfs IDs to paths; use
+      # transactional-update state file as a workaround.
+      if [ -e /var/lib/misc/transactional-update.state ]; then
+        source /var/lib/misc/transactional-update.state
+        health_checker_lastok="\${LAST_WORKING_SNAPSHOTS}"
+      fi
     fi
+
+    btrfs-mount-subvol (\$root) /.snapshots @/.snapshots
+    for snapshot in \${health_checker_lastok}; do
+      if [ -e "/.snapshots/\${snapshot}/grub-snapshot.cfg" ]; then
+        menuentry "Previous boot failed; booting snapshot \${snapshot}" { true; }
+        source /.snapshots/\${snapshot}/grub-snapshot.cfg
+        menuentry "________________" { true; }
+        set default=1
+      fi
+    done
   fi
 fi
 EOF

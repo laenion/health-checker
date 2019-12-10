@@ -2,7 +2,7 @@
 set -e
 
 # GRUB's grub2_mkconfig script currently has some serious limitations, one of 
-# them beeing not providing a way to modify anything done by previous scripts;
+# them being not providing a way to modify anything done by previous scripts;
 # unfortunately health_checker requires additional commands to be executed
 # when selecting a boot entry (which is usually created by 10_linux), so as a
 # horrible workaround the temporary output will be modified by a sed script.

@@ -74,6 +74,8 @@ save_working_snapshot()
 
     if [ ${BTRFS_ID_DEFAULT} -eq ${BTRFS_ID_CURRENT} ]; then
 	echo "LAST_WORKING_BTRFS_ID=${BTRFS_ID_DEFAULT}" > $STATE_FILE
+	BTRFS_SNAP_CURRENT=`findmnt --output OPTIONS --noheadings / | sed -e 's|.*\.snapshots/\(.*\)/snapshot.*|\1|g'`
+	grub2-editenv - set health_checker_lastok=${BTRFS_SNAP_CURRENT}
     fi
 }
 
